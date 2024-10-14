@@ -1,6 +1,7 @@
 import requests
 from bs4 import BeautifulSoup
 import pandas as pd
+from time import sleep
 
 # Ana URL
 base_url = 'https://www.arabam.com/ikinci-el/otomobil'
@@ -61,12 +62,13 @@ all_car_data = []
 
 for page in range(1,all_pages+1):
     page_car_data = get_car_data(page)
+    sleep(1)
     if page_car_data:
         all_car_data.extend(page_car_data)
         
 dataframe = pd.DataFrame(all_car_data)
 
-dataframe.to_csv('car_dataset_arabam_com_otomobil.csv')
+dataframe.to_csv('web_scrapping and car_datasets/car_dataset_arabam_com_otomobil.csv')
     
 
 
