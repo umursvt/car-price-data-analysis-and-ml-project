@@ -4,23 +4,36 @@ from sklearn.preprocessing import OneHotEncoder
 import locale
 import numpy as np
 from sklearn.model_selection import train_test_split
-
+import joblib
 from sklearn.linear_model import LinearRegression, Ridge, Lasso
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.svm import SVR
 from sklearn.metrics import mean_absolute_error, r2_score,mean_squared_error
 import numpy as np
+import os
 
 
+    
 """
-Bu projede makinme öğrenimi ile tarih kolonunu da bir feature olarak kullanmak istedim modeli eğitirken ama malesef tarih değerlerinin hepsi
-10.aya(Ekim) ait olması gereği ile buradan bir categorik veri getirmek anlamsız geldi. yine de yaptığım işleri silmemek için kodları tutuyorum burada
-feature datasetinde(X) tarih bilgisine yer vermeyeceğim
+This project aims to apply machine learning to predict car prices based on various features such as the car's brand, model, age, mileage, motor capacity, and more. Initially, the dataset included date information, but since all dates fall within the same month (October), including the date as a categorical feature was deemed irrelevant. However, the code for handling the date feature has been retained for reference purposes.
 
+Key steps in the project include:
+1. Data preprocessing: Converting date strings to datetime objects, extracting year, month, and day from the date, and handling missing values.
+2. Cleaning categorical columns such as 'City', 'Motor', and 'Kilometres' by applying string operations, removing unnecessary characters, and filling missing values.
+3. Calculating derived features such as the car's age and price per kilometer.
+4. Preprocessing the features by applying OneHotEncoder for categorical data and normalizing numerical data.
+5. Training and evaluating multiple regression models, including Linear Regression, Ridge, Lasso, Random Forest, and Support Vector Regression (SVR).
+6. For each model, performance metrics such as R², Mean Absolute Error (MAE), and Root Mean Squared Error (RMSE) are calculated and saved to an Excel file.
+
+Note: The project excludes the 'Advert Date' feature from the final model training due to the homogeneity of date values in the dataset.
 """
-
 # Tarih kolonundaki  str verileri date e çevirmek için gerekli
 locale.setlocale(locale.LC_TIME, 'tr_TR.UTF-8')
+
+if not os.path.exists('models'):
+    os.makedirs('models')
+# Bilimsel gösterimi devre dışı bırak
+pd.set_option('display.float_format', '{:.2f}'.format)
 
 dataset_suv = pd.read_csv('web_scrapping and car_datasets/car_dataset_arabam_com_suv.csv')
 dataset_oto = pd.read_csv('web_scrapping and car_datasets/car_dataset_arabam_com_otomobil.csv')
@@ -83,20 +96,21 @@ all_dataset['Price'] = all_dataset['Price'].astype(str).apply(
 
 all_dataset['Price'] = all_dataset['Price'].astype(int)
 
-# Kilometre başına fiyat hesaplama (Price_per_Km)
-all_dataset['Price_per_Km'] = all_dataset['Price'] / (all_dataset['Kilometres'] + 1) 
+# # Kilometre başına fiyat hesaplama (Price_per_Km)
+# all_dataset['Price_per_Km'] = all_dataset['Price'] / (all_dataset['Kilometres'] + 1) 
 
 
 zero_kilometres_rows = all_dataset.loc[all_dataset['Kilometres'] == 0] 
 
 
 # Feature and Target
-X = all_dataset.drop([ 'Price','Advert Year','Advert Month','Advert Day','Year','Advert Date'],axis=1)
+X = all_dataset.drop([ 'Price','Advert Year','Advert Month','Advert Day','Year','Advert Date','Unnamed: 0',],axis=1)
 Y = all_dataset['Price']
 
+print(X)
 
 categorical_columns = ['City', 'Brand', 'Model','Kilometres','Colors']  
-numerical_columns = ['Kilometres','Car Age','Motor','Price_per_Km','Price_per_Km']
+numerical_columns = ['Kilometres','Car Age','Motor']
 
 # Preprocessing
 preprocessor = ColumnTransformer(
@@ -120,33 +134,56 @@ models ={
     'Support Vector Regression':SVR()
 }
 
-
-with pd.ExcelWriter('machine learning model/model_results.xlsx') as writer:
-    for name, model in models.items():
+with pd.ExcelWriter('results.xlsx') as writer:
+    for name,model in models.items():
         model.fit(x_train,y_train)
-        y_pred=model.predict(x_test)
+        y_pred = model.predict(x_test)
         
         # Metrik değer hesapları
         r2 = r2_score(y_test,y_pred)
         mae =mean_absolute_error(y_test,y_pred)
-        rmse = np.sqrt(mean_squared_error(y_test,y_pred))
-        
-        results_df = pd.DataFrame({
-            'Real Value': y_test,
-            'Predicted Value': y_pred
-        })
-        
-        metrics_df = pd.DataFrame({
-            'Metric':['R²','MAE','RMSE'],
-            'Values':[r2,mae,rmse]
-        })
-        
-        # Bilimsel gösterimi devre dışı bırak
-        pd.set_option('display.float_format', '{:.2f}'.format)
-        
-        results_df.to_excel(writer,sheet_name=name,index=False)
-        metrics_df.to_excel(writer,sheet_name=name,startrow=len(results_df) + 2,index=False)
-        print(f"Results for {name} saved to Excel.")
-   
- 
 
+        metrics_df =pd.DataFrame({
+            'Metrics':['R2','MAE'],
+            'Values':[r2,mae]
+        })
+
+        results_df = pd.DataFrame({
+                'Real Value': y_test,
+                'Predicted Value': y_pred
+            })
+        print(results_df)
+        joblib.dump(preprocessor, f"models/{name}.pkl")
+        joblib.dump(model,f"models/{name}.pkl")
+        
+        print(f"{name} başarıyla kaydedildi")
+        
+        # tahmin için yeni veriler
+        new_data = pd.DataFrame({
+            'City': ['Edirne'],  
+            'Brand': ['Citroen'],       
+            'Model': ['C3'], 
+            'Motor': [1.4], 
+            'Kilometres':[260000],
+            'Colors': ['Bej'],    
+            'Car Age': [16],                 
+        })
+        new_data_preprocessed = preprocessor.transform(new_data)
+
+        new_value_predict=model.predict(new_data_preprocessed)
+        
+        new_value_predicted_df = pd.DataFrame({
+            'City': ['Edirne'],  
+            'Brand': ['Citroen'],       
+            'Model': ['C3'], 
+            'Motor': [1.4], 
+            'Kilometres':[260000],
+            'Colors': ['Bej'],    
+            'Car Age': [16],
+            'Predicted Value' : new_value_predict
+        })
+        
+        print('-'*50)
+        results_df.to_excel(writer,sheet_name=name,index=False)
+        new_value_predicted_df.to_excel(writer,sheet_name=name,startcol=len(results_df.columns)+2,index=False)
+        metrics_df.to_excel(writer,sheet_name=name,startcol=len(results_df.columns)+len(new_value_predicted_df.columns)+2,index=False)

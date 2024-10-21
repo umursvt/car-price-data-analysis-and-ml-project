@@ -74,3 +74,34 @@ dataframe.to_csv('web_scrapping and car_datasets/car_dataset_arabam_com_otomobil
 
 
     
+
+
+# # models
+# models ={
+#     'Linear Regression': LinearRegression(),
+#     'Ridge Regression':Ridge(),
+#     # 'Lasso Regression': Lasso(),
+#     'Random Forest': RandomForestRegressor(),
+#     'Support Vector Regression':SVR()
+# }
+
+
+# for name,model in models.items():
+
+
+#     model.fit(x_train,y_train)
+#     y_pred = model.predict(x_test)
+    
+#     # Metrik değer hesapları
+#     r2 = r2_score(y_test,y_pred)
+#     mae =mean_absolute_error(y_test,y_pred)
+#     rmse = np.sqrt(mean_squared_error(y_test,y_pred))
+
+#     results_df = pd.DataFrame({
+#             'Real Value': y_test,
+#             'Predicted Value': y_pred
+#         })
+#     print(results_df)
+
+#     joblib.dump(model,f"models/{name}.pkl")
+#     print(f"{name} başarıyla kaydedildi")
